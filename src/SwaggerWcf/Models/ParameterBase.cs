@@ -3,7 +3,7 @@ using Newtonsoft.Json;
 
 namespace SwaggerWcf.Models
 {
-    internal abstract class ParameterBase
+    public abstract class ParameterBase
     {
         public string Name { get; set; }
 

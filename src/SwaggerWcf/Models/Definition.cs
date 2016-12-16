@@ -2,7 +2,7 @@
 
 namespace SwaggerWcf.Models
 {
-    internal class Definition
+    public class Definition
     {
         public DefinitionSchema Schema { get; set; }
 

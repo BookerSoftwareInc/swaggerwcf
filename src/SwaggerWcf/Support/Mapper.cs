@@ -113,7 +113,12 @@ namespace SwaggerWcf.Support
                     implementation.GetCustomAttributes<SwaggerWcfTagAttribute>().ToList();
                 methodTags =
                     methodTags.Concat(declaration.GetCustomAttributes<SwaggerWcfTagAttribute>()).ToList();
-                methodTags = methodTags.Distinct().ToList();
+
+				// we also should load tags from class itself not from specific property
+				methodTags =
+					methodTags.Concat(implementation.ReflectedType.GetCustomAttributes<SwaggerWcfTagAttribute>()).ToList();
+
+				methodTags = methodTags.Distinct().ToList();
 
                 if (methodTags.Select(t => t.TagName).Any(HiddenTags.Contains))
                     continue;
@@ -428,21 +433,19 @@ namespace SwaggerWcf.Support
 
         private InType GetInType(string uriTemplate, string parameterName)
         {
-            Regex reg = new Regex(@"\{" + parameterName + @"\}");
-            Regex regWithDefaultValue = new Regex(@"\{" + parameterName + @"=[a-zA-Z0-9]+\}");
-            if (!reg.Match(uriTemplate).Success && !regWithDefaultValue.Match(uriTemplate).Success)
-                return InType.Body;
+			var parameter = "{" + parameterName + "}";
+			if (!uriTemplate.Contains(parameter))
+				return InType.Body;
 
-            int questionMarkPosition = uriTemplate.IndexOf("?", StringComparison.Ordinal);
+			int questionMarkPosition = uriTemplate.IndexOf("?", StringComparison.Ordinal);
 
-            if (questionMarkPosition == -1)
-                return InType.Path;
+			if (questionMarkPosition == -1)
+				return InType.Path;
 
-            if (questionMarkPosition > uriTemplate.IndexOf(parameterName, StringComparison.Ordinal))
-                return InType.Path;
-
-            return regWithDefaultValue.Match(uriTemplate).Success ? InType.Body : InType.Query;
-        }
+			return (questionMarkPosition > uriTemplate.IndexOf(parameter, StringComparison.Ordinal))
+					   ? InType.Path
+					   : InType.Query;
+		}
 
         private IEnumerable<string> GetConsumes(MethodInfo implementation, MethodInfo declaration)
         {

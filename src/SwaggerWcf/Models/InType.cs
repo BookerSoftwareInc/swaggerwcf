@@ -1,6 +1,6 @@
 ﻿namespace SwaggerWcf.Models
 {
-    internal enum InType
+    public enum InType
     {
         Unknown = 0,
         Body = 1,

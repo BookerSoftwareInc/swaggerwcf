@@ -4,7 +4,7 @@ using Newtonsoft.Json;
 
 namespace SwaggerWcf.Models
 {
-    internal class PathAction
+    public class PathAction
     {
         public PathAction()
         {

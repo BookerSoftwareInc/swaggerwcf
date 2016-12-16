@@ -3,7 +3,7 @@ using Newtonsoft.Json;
 
 namespace SwaggerWcf.Models
 {
-    internal class ExternalDocumentation
+    public class ExternalDocumentation
     {
         public string Description { get; set; }
 

@@ -4,7 +4,7 @@ using Newtonsoft.Json;
 
 namespace SwaggerWcf.Models
 {
-    internal class Schema
+    public class Schema
     {
         public TypeFormat TypeFormat { get; set; } // for primitives
 

@@ -4,13 +4,14 @@ using Newtonsoft.Json;
 
 namespace SwaggerWcf.Models
 {
-    internal sealed class Service
+    public sealed class Service
     {
         public Service()
         {
             Swagger = "2.0";
             Paths = new List<Path>();
             Definitions = new List<Definition>();
+			Schemes = new List<string>();
         }
 
         public string Swagger { get; set; }
@@ -20,6 +21,8 @@ namespace SwaggerWcf.Models
         public string Host { get; set; }
 
         public string BasePath { get; set; }
+
+		public List<string> Schemes { get; set; }
 
         public List<Path> Paths { get; set; }
 
@@ -47,7 +50,13 @@ namespace SwaggerWcf.Models
                 writer.WriteValue(BasePath);
             }
 
-            if (Paths != null && Paths.Any())
+			if (Schemes != null && Schemes.Any())
+			{
+				writer.WritePropertyName("schemes");
+				WriteSchemes(writer);
+			}
+
+			if (Paths != null && Paths.Any())
             {
                 writer.WritePropertyName("paths");
                 WritePaths(writer);
@@ -80,5 +89,15 @@ namespace SwaggerWcf.Models
             }
             writer.WriteEndObject();
         }
-    }
+
+		private void WriteSchemes(JsonWriter writer)
+		{
+			writer.WriteStartArray();
+			foreach (var scheme in Schemes)
+			{
+				writer.WriteValue(scheme);
+			}
+			writer.WriteEndArray();
+		}
+	}
 }

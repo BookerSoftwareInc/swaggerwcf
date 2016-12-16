@@ -23,12 +23,16 @@ namespace SwaggerWcf
             Init();
         }
 
-        private static void Init()
+        public static event EventHandler<Service> OnGenerationCompleted;
+
+        public static void Init()
         {
             if (Interlocked.CompareExchange(ref _initialized, 1, 0) != 0)
                 return;
 
             Service = ServiceBuilder.Build();
+
+			OnGenerationCompleted?.Invoke(null, Service);
         }
 
         public static void SetCustomZip(Stream customSwaggerUiZipStream)

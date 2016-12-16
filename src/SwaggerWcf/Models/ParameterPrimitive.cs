@@ -1,10 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
 
 namespace SwaggerWcf.Models
 {
-    internal class ParameterPrimitive : ParameterBase
+    public class ParameterPrimitive : ParameterBase
     {
         public ParameterPrimitive()
         {
@@ -108,7 +109,24 @@ namespace SwaggerWcf.Models
             if (!string.IsNullOrWhiteSpace(Default))
             {
                 writer.WritePropertyName("default");
-                writer.WriteValue(Default);
+
+				// if it's primitive, then we need to render it as primitive
+	            switch (TypeFormat.Type)
+	            {
+			        case ParameterType.Boolean:
+			            writer.WriteValue(Boolean.Parse(Default));
+						break;
+					case ParameterType.Integer:
+						writer.WriteValue(Int64.Parse(Default));
+						break;
+					case ParameterType.Number:
+						writer.WriteValue(Double.Parse(Default));
+						break;
+					default:
+						writer.WriteValue(Default);
+						break;
+				}
+
             }
             if (Maximum != decimal.MaxValue)
             {

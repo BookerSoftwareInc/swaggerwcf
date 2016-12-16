@@ -3,7 +3,7 @@ using Newtonsoft.Json;
 
 namespace SwaggerWcf.Models
 {
-    internal class ParameterItems
+    public class ParameterItems
     {
         public TypeFormat TypeFormat { get; set; }
 
