@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
 using System.Reflection;
+using System.ServiceModel;
 using SwaggerWcf.Attributes;
 using SwaggerWcf.Configuration;
 using SwaggerWcf.Models;
@@ -12,31 +13,46 @@ namespace SwaggerWcf.Support
 {
     internal class ServiceBuilder
     {
-        public static Service Build()
-        {
-            Service service = BuildService();
 
-            return service;
+        private class ServiceBuildInfo
+        {
+            public string Name { get; set; }
+            public List<Path> Paths { get; set; }
+            public List<Type> DefinitionsTypesList { get; set; }
         }
 
-        private static Service BuildService()
+        public static List<Service> Build()
+        {
+            return BuildService();
+        }
+
+        private static List<Service> BuildService()
         {
             const string sectionName = "swaggerwcf";
             SwaggerWcfSection config =
                 (SwaggerWcfSection)(ConfigurationManager.GetSection(sectionName) ?? new SwaggerWcfSection());
-            List<Type> definitionsTypesList = new List<Type>();
-            Service service = new Service();
+
             List<string> hiddenTags = GetHiddenTags(config);
             List<string> visibleTags = GetVisibleTags(config);
             IReadOnlyDictionary<string, string> settings = GetSettings(config);
 
-            ProcessSettings(service, settings);
+            var serviceInfos = BuildPaths(hiddenTags);
+            var result = new List<Service>();
 
-            BuildPaths(service, hiddenTags, definitionsTypesList);
+            foreach (var serviceInfo in serviceInfos)
+            {
+                var service = new Service();
 
-            service.Definitions = DefinitionsBuilder.Process(hiddenTags, visibleTags, definitionsTypesList);
+                ProcessSettings(service, settings);
+                service.Paths = serviceInfo.Value.Paths;
+                service.Definitions = DefinitionsBuilder.Process(hiddenTags, visibleTags,
+                    serviceInfo.Value.DefinitionsTypesList);
+                service.Name = serviceInfo.Value.Name ?? string.Empty;
 
-            return service;
+                result.Add(service);
+            }
+
+            return result;
         }
 
         private static List<string> GetHiddenTags(SwaggerWcfSection config)
@@ -101,10 +117,19 @@ namespace SwaggerWcf.Support
                 service.Info.License.Name = settings["InfoLicenseName"];
         }
 
-        private static void BuildPaths(Service service, IList<string> hiddenTags, IList<Type> definitionsTypesList)
+        private static Dictionary<TypeInfo, ServiceBuildInfo> BuildPaths(IList<string> hiddenTags)
         {
-            Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
-            service.Paths = new List<Path>();
+            var wcfAssembly = typeof(ServiceContractAttribute).Assembly.GetName().Name;
+
+            // if assembly is from GAC, then we don't need to process it
+            // or if assembly doesn't reference System.ServiceModel so it can't have WCF services and we also can safely ignore it
+            Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies()
+                .Where(
+                    assembly =>
+                        !assembly.GlobalAssemblyCache ||
+                        assembly.GetReferencedAssemblies().Any(a => a.Name != wcfAssembly)).ToArray();
+
+            Dictionary<TypeInfo, ServiceBuildInfo> result = new Dictionary<TypeInfo, ServiceBuildInfo>();
 
             foreach (Assembly assembly in assemblies)
             {
@@ -127,10 +152,16 @@ namespace SwaggerWcf.Support
 
                     Mapper mapper = new Mapper(hiddenTags);
 
-                    IEnumerable<Path> paths = mapper.FindMethods(da.ServicePath, ti.AsType(), definitionsTypesList);
-                    service.Paths.AddRange(paths);
+                    var info = new ServiceBuildInfo();
+                    info.DefinitionsTypesList = new List<Type>();
+                    info.Name = da.Name;
+                    info.Paths = mapper.FindMethods(da.ServicePath, ti.AsType(), info.DefinitionsTypesList).ToList();
+
+                    result.Add(ti, info);
                 }
             }
+
+            return result;
         }
     }
 }

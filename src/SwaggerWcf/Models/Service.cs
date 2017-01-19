@@ -28,6 +28,11 @@ namespace SwaggerWcf.Models
 
         public List<Definition> Definitions { get; set; }
 
+        /// <summary>
+        /// We don't serialize this property and just use it to understand what this service is if we have more than one
+        /// </summary>
+        public string Name { get; set; }
+
         public void Serialize(JsonWriter writer)
         {
             writer.WriteStartObject();

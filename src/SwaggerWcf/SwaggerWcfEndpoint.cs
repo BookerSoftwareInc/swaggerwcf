@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.ServiceModel.Activation;
 using System.ServiceModel.Web;
@@ -7,6 +9,7 @@ using System.Text;
 using System.Threading;
 using SwaggerWcf.Models;
 using SwaggerWcf.Support;
+using Path = System.IO.Path;
 
 namespace SwaggerWcf
 {
@@ -15,7 +18,7 @@ namespace SwaggerWcf
     [AspNetCompatibilityRequirements(RequirementsMode = AspNetCompatibilityRequirementsMode.Allowed)]
     public class SwaggerWcfEndpoint : ISwaggerWcfEndpoint
     {
-        private static Service Service { get; set; }
+        private static List<Service> Services { get; set; }
         private static int _initialized;
 
         public SwaggerWcfEndpoint()
@@ -23,16 +26,16 @@ namespace SwaggerWcf
             Init();
         }
 
-        public static event EventHandler<Service> OnGenerationCompleted;
+        public static event EventHandler<List<Service>> OnGenerationCompleted;
 
         public static void Init()
         {
             if (Interlocked.CompareExchange(ref _initialized, 1, 0) != 0)
                 return;
 
-            Service = ServiceBuilder.Build();
+            Services = ServiceBuilder.Build();
 
-			OnGenerationCompleted?.Invoke(null, Service);
+			OnGenerationCompleted?.Invoke(null, Services);
         }
 
         public static void SetCustomZip(Stream customSwaggerUiZipStream)
@@ -49,20 +52,45 @@ namespace SwaggerWcf
         public static void Configure(Info info)
         {
             Init();
-            Service.Info = info;
+            foreach (var service in Services)
+            {
+                service.Info = info;
+            }
         }
 
         public Stream GetSwaggerFile()
         {
+            return GetSwaggerFile(null);
+        }
+
+        public Stream GetSwaggerFile(string name)
+        {
             WebOperationContext woc = WebOperationContext.Current;
-            if (woc != null)
+
+            Service service;
+            if (string.IsNullOrEmpty(name))
             {
-                //TODO: create a parameter in settings to configure this
-                woc.OutgoingResponse.Headers.Add("Access-Control-Allow-Origin", "*");
-                woc.OutgoingResponse.ContentType = "application/json";
+                service = Services.First();
+            }
+            else
+            {
+                var serviceName = Path.GetFileNameWithoutExtension(name);
+
+                service =
+                    Services.FirstOrDefault(s => string.Equals(s.Name, serviceName, StringComparison.CurrentCultureIgnoreCase));
+
+                if (service == null)
+                {
+                    woc.OutgoingResponse.StatusCode = HttpStatusCode.NotFound;
+                    return null;
+                }
             }
 
-            return new MemoryStream(Encoding.UTF8.GetBytes(Serializer.Process(Service)));
+            woc.OutgoingResponse.Headers.Add("Access-Control-Allow-Origin", "*");
+            woc.OutgoingResponse.ContentType = "application/json";
+
+            // we always return first swagger
+            return new MemoryStream(Encoding.UTF8.GetBytes(Serializer.Process(service)));
         }
 
         public Stream StaticContent(string content)
@@ -83,6 +111,11 @@ namespace SwaggerWcf
             string filename = content.Contains("?")
                 ? content.Substring(0, content.IndexOf("?", StringComparison.Ordinal))
                 : content;
+
+            if (filename.EndsWith(".json", StringComparison.CurrentCultureIgnoreCase))
+            {
+                return GetSwaggerFile(filename);
+            }
 
             string contentType;
             long contentLength;
