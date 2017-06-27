@@ -27,6 +27,11 @@ namespace SwaggerWcf.Support
                 if (IsHidden(t, hiddenTags, visibleTags) || processedTypes.Contains(t))
                     continue;
 
+				if (t.Name == "PaymentItem")
+				{
+					System.Diagnostics.Debugger.Break();
+				}
+
                 processedTypes.Add(t);
                 Definition definition = ConvertTypeToDefinition(t, hiddenTags, typesStack);
                 if (definition != null)
@@ -62,8 +67,10 @@ namespace SwaggerWcf.Support
             // process
             schema.TypeFormat = Helpers.MapSwaggerType(definitionType, null);
 
+
             if (schema.TypeFormat.IsPrimitiveType)
                 return null;
+
 
             if (schema.TypeFormat.Type == ParameterType.String && schema.TypeFormat.Format == "enum")
             {
@@ -126,11 +133,32 @@ namespace SwaggerWcf.Support
         private static void ProcessProperties(Type definitionType, DefinitionSchema schema, IList<string> hiddenTags,
                                               Stack<Type> typesStack)
         {
-            PropertyInfo[] properties = definitionType.GetProperties();
+			List<PropertyInfo> properties = new List<PropertyInfo>();
+			var type = definitionType;
+			while(type != null)
+			{
+				var props = type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+				foreach(var prop in props)
+				{
+					if (properties.Any(p => p.Name == prop.Name))
+						continue;
+
+					properties.Add(prop);
+				}
+
+				type = type.BaseType;
+			}
+
+
+			//PropertyInfo[] properties = definitionType.GetProperties(BindingFlags.Instance | BindingFlags.FlattenHierarchy | BindingFlags.Public | BindingFlags.NonPublic);
             schema.Properties = new List<DefinitionProperty>();
 
             foreach (PropertyInfo propertyInfo in properties)
             {
+				//if (propertyInfo.Name == "AppointmentPaymentProp")
+				//{
+				//	System.Diagnostics.Debugger.Break();
+				//}
                 DefinitionProperty prop = ProcessProperty(propertyInfo, hiddenTags, typesStack);
 
                 if (prop == null)
