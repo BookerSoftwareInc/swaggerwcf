@@ -27,11 +27,6 @@ namespace SwaggerWcf.Support
                 if (IsHidden(t, hiddenTags, visibleTags) || processedTypes.Contains(t))
                     continue;
 
-				if (t.Name == "PaymentItem")
-				{
-					System.Diagnostics.Debugger.Break();
-				}
-
                 processedTypes.Add(t);
                 Definition definition = ConvertTypeToDefinition(t, hiddenTags, typesStack);
                 if (definition != null)
@@ -155,10 +150,6 @@ namespace SwaggerWcf.Support
 
             foreach (PropertyInfo propertyInfo in properties)
             {
-				//if (propertyInfo.Name == "AppointmentPaymentProp")
-				//{
-				//	System.Diagnostics.Debugger.Break();
-				//}
                 DefinitionProperty prop = ProcessProperty(propertyInfo, hiddenTags, typesStack);
 
                 if (prop == null)
